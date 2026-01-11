@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>JARVIS Voice</title>
+  <style>
+    body {
+      background: #0b0f14;
+      color: #00e5ff;
+      font-family: Arial, sans-serif;
+    }
+    #chat {
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+    .msg { margin: 10px 0; }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background: #00e5ff;
+      border: none;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="chat">
+  <h2>🤖 JARVIS</h2>
+  <div id="messages"></div>
+  <input id="input" placeholder="Escribe o habla..." />
+  <button onclick="send()">Enviar</button>
+  <button onclick="listen()">🎤 Hablar</button>
+  <button id="hotwordBtn">🎧 Escucha siempre</button>
+</div>
+
+<script>
+  const messages = document.getElementById('messages')
+  const hotwordBtn = document.getElementById('hotwordBtn')
+
+  function add(who, text) {
+    const div = document.createElement('div')
+    div.className = 'msg'
+    div.textContent = `${who}: ${text}`
+    messages.appendChild(div)
+    messages.scrollTop = messages.scrollHeight
+  }
+
+  async function send(textFromVoice = null) {
+    const input = document.getElementById('input')
+    const text = textFromVoice || input.value
+    if (!text) return
+    add('🧑', text)
+    input.value = ''
+
+    // 🔑 Detectar comandos
+    const isCommand = text.toLowerCase().includes('correo') || text.toLowerCase().includes('envía un correo')
+    const endpoint = isCommand ? '/command' : '/chat'
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    })
+
+    const data = await res.json()
+    add('🤖', data.reply)
+    speak(data.reply)
+  }
+
+  // 🎤 Speech to Text simple
+  function listen() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) return alert('Tu navegador no soporta reconocimiento de voz')
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'es-ES'
+    recognition.start()
+    recognition.onresult = (event) => {
+      const text = event.results[0][0].transcript
+      send(text)
+    }
+  }
+
+  // 🔊 Text to Speech
+  function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'es-ES'
+    utterance.rate = 1
+    speechSynthesis.speak(utterance)
+  }
+
+  // 🎧 Hotword detection "Jarvis"
+  hotwordBtn.onclick = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) return alert('Tu navegador no soporta reconocimiento de voz')
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'es-ES'
+    recognition.continuous = true
+    recognition.interimResults = false
+
+    recognition.onresult = async (event) => {
+      const text = event.results[event.results.length - 1][0].transcript.trim()
+      console.log('Detectado:', text)
+      if (text.toLowerCase().includes('jarvis')) {
+        const message = text.replace(/jarvis/i, '').trim()
+        send(message || 'Hola')
+      }
+    }
+
+    recognition.start()
+    alert('JARVIS ahora está escuchando continuamente. Di "Jarvis" para hablarle.')
+  }
+</script>
+
+</body>
+</html>
+
+
